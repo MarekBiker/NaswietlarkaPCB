@@ -27,6 +27,30 @@ int TimeTempCounter = 0;
 int TimeRemaining = 0;
 short FunctionMode = 0;
 
+void CartParking(void) {
+
+	// wylaczenie silnika
+	PORTB |= 1<<0;
+	_delay_ms(40);
+	// ustawienie kierunku powrotu
+	PORTB &= ~(1<<2);
+	_delay_ms(40);
+	// doprowadzanie wozka do jednej z krawêdzi
+	while ((PINC & (1 << 4)))
+	{
+		PORTB &= ~(1<<0);
+		_delay_ms(10);
+	}
+	// wylaczenie silnika i ustawienie kierunku na przeciwny
+	PORTB |= 1<<0;
+	PORTB = PORTB ^ 0b00000100;
+	_delay_ms(50);
+	PORTB &= ~(1<<0);
+	_delay_ms(1000);
+	PORTB |= 1<<0;
+
+}
+
 int main(void)
 {
 	// DEKLARACJE ZMIENNYCH
@@ -63,18 +87,11 @@ int main(void)
 	
 	// w³¹czanie przerwañ
 	sei();
-
-
+	
+	// wylaczenie silnika
 	PORTB |= 1<<0;
 
-	// doprowadzanie wozka do jednej z krawêdzi
-	while ((PINC & (1 << 4)))
-	{
-		PORTB &= ~(1<<0);
-		_delay_ms(10);
-	}
-	PORTB |= 1<<0;
-	PORTB = PORTB ^ 0b00000100;
+	CartParking();
 
 	while (1)
 	{
@@ -190,21 +207,7 @@ int main(void)
 				LCD_WriteText("   Koncze...    ");
 				// wylaczanie lampy
 				PORTC &= ~(1<<0);
-				// wylaczenie silnika
-				PORTB |= 1<<0;
-				_delay_ms(50);
-				// ustawienie kierunku powrotu
-				PORTB &= ~(1<<2);
-				_delay_ms(50);
-				// doprowadzanie wozka do jednej z krawêdzi
-				while ((PINC & (1 << 4)))
-				{
-					PORTB &= ~(1<<0);
-					_delay_ms(10);
-				}
-				// wylaczenie silnika i ustawienie kierunku na przeciwny
-				PORTB |= 1<<0;
-				PORTB = PORTB ^ 0b00000100;
+				CartParking();
 				FunctionMode = 0;
 			}
 		}
