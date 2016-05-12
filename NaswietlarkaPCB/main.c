@@ -22,11 +22,15 @@
 #define DefaultTime 600
 #define ButtonDelay 20
 
+// zmienne globalne
+int TimeTempCounter = 0;
+int TimeRemaining = 0;
+short FunctionMode = 0;
 
 int main(void)
 {
 	// DEKLARACJE ZMIENNYCH
-	short FunctionMode = 0;
+	
 	short Time_s;
 	short Time_m;
 	int TimeSelect = DefaultTime;
@@ -34,7 +38,6 @@ int main(void)
 	short Start_old = 0;
 	char bufor[16];
 	short EndFlag = 0;
-	int TimeRemaining = 0;
 	short EndSwitch = 0;
 	short EndSwitch_old = 0;
 	
@@ -174,7 +177,7 @@ int main(void)
 			LCD_GoTo(0,1);
 			LCD_WriteText(bufor);
 			
-			if (TimeRemaining == 0 & ((EndSwitch == 1) & (EndSwitch_old == 0)))
+			if ((TimeRemaining == 0) & ((EndSwitch == 1) & (EndSwitch_old == 0)))
 			{
 				EndFlag = 1;
 			}
@@ -182,7 +185,7 @@ int main(void)
 			
 			// jeœli ponownie START to wy³¹cza naœwietlanie i przechodzi do poprzedniego trybu
 			if ( ((Start == 1) & (Start_old == 0)) | (EndFlag == 1) )
-			{						
+			{
 				LCD_Clear();
 				LCD_WriteText("   Koncze...    ");
 				// wylaczanie lampy
@@ -191,7 +194,7 @@ int main(void)
 				PORTB |= 1<<0;
 				_delay_ms(50);
 				// ustawienie kierunku powrotu
-				PORTB &= ~(1<<2); 
+				PORTB &= ~(1<<2);
 				_delay_ms(50);
 				// doprowadzanie wozka do jednej z krawêdzi
 				while ((PINC & (1 << 4)))
@@ -208,9 +211,24 @@ int main(void)
 	}
 }
 
-// wykonuje sie 2500 razy/s
+// wykonuje sie 2273 razy/s
 ISR (TIMER1_COMPA_vect)
 {
-	// czestotliwosc PWM ok. 1250 Hz
+	// czestotliwosc PWM ok. 1136 Hz
 	PORTB = PORTB ^ 0b00000010;
+
+	if (FunctionMode == 1)
+	{
+		TimeTempCounter = TimeTempCounter + 1;
+
+		if (TimeTempCounter == 2273)
+		{
+			TimeRemaining = TimeRemaining - 1;
+			if (TimeRemaining < 0)
+			{
+				TimeRemaining = 0;
+			}
+			TimeTempCounter = 0;
+		}
+	}
 }
