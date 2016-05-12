@@ -17,6 +17,7 @@
 #include "HD44780.h"
 #include <stdio.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 
 #define DefaultTime 600
 #define ButtonDelay 20
@@ -39,6 +40,7 @@ int main(void)
 	
 	// INICJALIZACJA WYŒWIETLACZA
 	LCD_Initalize();
+	LCD_WriteText("** Wlaczam... **");
 	
 	// USTAWIENIE WYJŒÆ//
 	DDRB |= 0b00000111; // PB0, PB1, PB2 jako wyjscie
@@ -49,16 +51,28 @@ int main(void)
 	PORTC |= 0b0111110; // ustawienie podciagania do VCC
 	
 	
-	TCCR1A |=(1<<WGM10);
+	// ustawienia timera
 	TCCR1B |=(1<<WGM12);
-	TCCR1A |=(1<<COM1A1);
-	TCCR1B |=(1<<CS10);
 	TCCR1B |=(1<<CS11);
+	TIMSK |= (1<<OCIE1A);
 	
-	OCR1A = 120;
+	OCR1A = 110;
 	
+	// w³¹czanie przerwañ
+	sei();
+
+
 	PORTB |= 1<<0;
-	
+
+	// doprowadzanie wozka do jednej z krawêdzi
+	while ((PINC & (1 << 4)))
+	{
+		PORTB &= ~(1<<0);
+		_delay_ms(10);
+	}
+	PORTB |= 1<<0;
+	PORTB = PORTB ^ 0b00000100;
+
 	while (1)
 	{
 		_delay_ms(20);
@@ -143,7 +157,10 @@ int main(void)
 			// zmiana kierunku obrotów silnika jeœli pojawi siê sygna³ z krañcówki
 			if ( (EndSwitch == 1) & (EndSwitch_old == 0) )
 			{
+				PORTB |= 1<<0;
 				PORTB = PORTB ^ 0b00000100;
+				_delay_ms(50);
+				PORTB &= ~(1<<0);
 			}
 			
 			// obs³uga wyœwietlacza
@@ -157,23 +174,43 @@ int main(void)
 			LCD_GoTo(0,1);
 			LCD_WriteText(bufor);
 			
-			if (TimeRemaining == 0)
+			if (TimeRemaining == 0 & ((EndSwitch == 1) & (EndSwitch_old == 0)))
 			{
 				EndFlag = 1;
 			}
-						
+			
 			
 			// jeœli ponownie START to wy³¹cza naœwietlanie i przechodzi do poprzedniego trybu
 			if ( ((Start == 1) & (Start_old == 0)) | (EndFlag == 1) )
-			{
-				// wylaczanie silnika
-				PORTB |= 1<<0;
+			{						
+				LCD_Clear();
+				LCD_WriteText("   Koncze...    ");
 				// wylaczanie lampy
 				PORTC &= ~(1<<0);
-				
+				// wylaczenie silnika
+				PORTB |= 1<<0;
+				_delay_ms(50);
+				// ustawienie kierunku powrotu
+				PORTB &= ~(1<<2); 
+				_delay_ms(50);
+				// doprowadzanie wozka do jednej z krawêdzi
+				while ((PINC & (1 << 4)))
+				{
+					PORTB &= ~(1<<0);
+					_delay_ms(10);
+				}
+				// wylaczenie silnika i ustawienie kierunku na przeciwny
+				PORTB |= 1<<0;
+				PORTB = PORTB ^ 0b00000100;
 				FunctionMode = 0;
 			}
 		}
 	}
 }
 
+// wykonuje sie 2500 razy/s
+ISR (TIMER1_COMPA_vect)
+{
+	// czestotliwosc PWM ok. 1250 Hz
+	PORTB = PORTB ^ 0b00000010;
+}
